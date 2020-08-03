@@ -23,7 +23,8 @@
   },
   "homepage": "https://github.com/c3cbot/c3cbot#readme",
   "dependencies": {
-    "custom-env": "^2.0.1"
+    "custom-env": "^2.0.1",
+    "dotenv": "^8.2.0"
   },
   "devDependencies": {
     "babel-eslint": "^10.1.0",
