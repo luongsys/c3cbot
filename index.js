@@ -4,7 +4,7 @@ let path = require("path");
 Object.assign(global, require("./app/classModifier"));
 
 if (!fs.existsSync(path.join(__dirname, ".env"))) {
-    fs.copyFileSync(path.join(__dirname, ".env.example"), path.join(__dirname, ".env"), 0o660);
+    fs.copyFileSync(path.join(__dirname, ".env.example"), path.join(__dirname, ".env"), fs.constants.COPYFILE_EXCL);
 }
 let customEnv = require("custom-env");
 customEnv.env();
