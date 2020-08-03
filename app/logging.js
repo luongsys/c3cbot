@@ -3,6 +3,9 @@ let fs = require("fs");
 let util = require("util");
 let os = require("os");
 
+const ANSI_CLEAR_LINE = "\x1B[2K";
+const ANSI_CARTIDGE_RETURN = "\x1B[0G";
+
 global.ensureExists(path.join(process.cwd(), ".data", "logs"));
 module.exports = class Logging {
     #prefix = "INTERNAL";
@@ -61,6 +64,8 @@ module.exports = class Logging {
 
         // Log to the console
         process.stdout.write(
+            ANSI_CLEAR_LINE + 
+            ANSI_CARTIDGE_RETURN +
             ANSI_COLOR_HEADER +
             `[${currentTimeHeader}] ` +
             `[${this.#prefix}]` +
