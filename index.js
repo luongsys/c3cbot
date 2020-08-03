@@ -19,7 +19,7 @@ global.centralData = centralData;
 // Get a logger
 let Logging = require("./app/logging");
 let logger = new Logging();
-console.log = logger.log;
+console.log = logger.log.bind(logger);
 
 // Output header
 logger.log("C3CBot v1.0-beta  Copyright (C) 2020  UIRI");
