@@ -3,7 +3,7 @@ let fs = require("fs");
 let util = require("util");
 let os = require("os");
 
-global.ensureExists(path.join(__dirname, ".data", "logs"));
+global.ensureExists(path.join(process.cwd(), ".data", "logs"));
 module.exports = class Logging {
     #prefix = "INTERNAL";
     #fileLogParams = {
