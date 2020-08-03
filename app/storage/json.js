@@ -4,17 +4,17 @@ let fs = require("fs");
 module.exports = class JSONStorage {
     #data = {};
 
-    constructor(indexDir) {
+    constructor() {
         this.type = "json";
 
-        this.jsonPath = path.resolve(indexDir, process.env.JSON_STORAGE_PATH);
+        this.jsonPath = path.resolve(process.cwd(), process.env.JSON_STORAGE_PATH);
         if (!fs.existsSync(this.jsonPath)) fs.writeFileSync(this.jsonPath, "{}");
         let initData = fs.readFileSync(this.jsonPath, { encoding: "utf8" });
         try {
             let data = JSON.parse(initData);
             this.#data = data;
         } catch (_) {
-            if (!fs.existsSync(jsonPath)) fs.writeFileSync(this.jsonPath, "{}");
+            if (!fs.existsSync(this.jsonPath)) fs.writeFileSync(this.jsonPath, "{}");
             this.#data = {};
         }
     }
@@ -35,7 +35,7 @@ module.exports = class JSONStorage {
                 let data = JSON.parse(initData);
                 this.#data = data;
             } catch (_) {
-                if (!fs.existsSync(jsonPath)) fs.writeFileSync(this.jsonPath, "{}");
+                if (!fs.existsSync(this.jsonPath)) fs.writeFileSync(this.jsonPath, "{}");
                 this.#data = {};
             }
             this.busy = false;

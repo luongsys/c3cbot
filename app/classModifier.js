@@ -1,3 +1,6 @@
+let fs = require("fs");
+let path = require("path");
+
 /**
  * Get the type of a value
  *
@@ -6,11 +9,19 @@
  * @return  {string}       The type of that value (String/Number/BigInt/Array/Object/...)
  */
 let getType = function getType(val) {
-    return Object.prototype.toString.call(arg).slice(8, -1);
+    return Object.prototype.toString.call(val).slice(8, -1);
 }
 
+/**
+ * Make sure that the path exists.
+ *
+ * @param   {string}  path  The path
+ * @param   {number}  mask  Mask
+ *
+ * @return  {object}        Return an object when the path already exists. (as error)
+ */
 let ensureExists = function ensureExists(path, mask) {
-    if (typeof mask != 'number') {
+    if (typeof mask != "number") {
         mask = 0o777;
     }
     try {
@@ -23,6 +34,55 @@ let ensureExists = function ensureExists(path, mask) {
         return {
             err: ex
         };
+    }
+}
+
+/**
+ * Find every file in a directory
+ *
+ * @param   {string}    startPath        A path specify where to start.
+ * @param   {RegExp}    filter           Regex to filter results.
+ * @param   {boolean}   arrayOutput      Options: Output array or send to callback?
+ * @param   {boolean}   recursive        Options: Recursive or not?
+ * @param   {function}  [callback]       Callback function.
+ *
+ * @return  {(Array<String>|undefined)}  An array contains path of every files match regex.
+ */
+let findFromDir = function findFromDir(startPath, filter, arrayOutput, recursive, callback) {
+    var nocallback = false;
+    if (!callback) {
+        callback = function () { };
+        nocallback = true;
+    }
+    if (!fs.existsSync(startPath)) {
+        throw "No such directory: " + startPath;
+    }
+    var files = fs.readdirSync(startPath);
+    var arrayFile = [];
+    for (var i = 0; i < files.length; i++) {
+        var filename = path.join(startPath, files[i]);
+        var stat = fs.lstatSync(filename);
+        if (stat.isDirectory() && recursive) {
+            var arrdata = findFromDir(filename, filter, true, true);
+            if (!nocallback && !arrayOutput) {
+                for (var n in arrdata) {
+                    callback(path.join(filename, arrdata[n]));
+                }
+            } else {
+                arrayFile = arrayFile.concat(arrdata);
+            }
+        } else {
+            if (!arrayOutput && !nocallback) {
+                if (filter.test(filename)) callback(filename);
+            } else {
+                if (filter.test(filename)) arrayFile[arrayFile.length] = filename;
+            }
+        }
+    }
+    if (arrayOutput && !nocallback) {
+        callback(arrayFile);
+    } else if (arrayOutput) {
+        return arrayFile;
     }
 }
 
@@ -57,4 +117,4 @@ JSON.parse = function parseWithBigInt(jsonString, reviver) {
     return ogParse(jsonString, r);
 }
 
-module.exports = { getType, ensureExists };
+module.exports = { getType, ensureExists, findFromDir };
