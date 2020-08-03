@@ -1,9 +1,9 @@
 let repl = require("repl");
 
 // Get ANSI color header based on config
-let redColorValue = parseInt(process.env.CONSOLE_LOG_COLOR.substr(0, 2));
-let greenColorValue = parseInt(process.env.CONSOLE_LOG_COLOR.substr(2, 2));
-let blueColorValue = parseInt(process.env.CONSOLE_LOG_COLOR.substr(4, 2));
+let redColorValue = parseInt(process.env.CONSOLE_LOG_COLOR.substr(0, 2), 16);
+let greenColorValue = parseInt(process.env.CONSOLE_LOG_COLOR.substr(2, 2), 16);
+let blueColorValue = parseInt(process.env.CONSOLE_LOG_COLOR.substr(4, 2), 16);
 if (
     isNaN(redColorValue) ||
     isNaN(greenColorValue) ||
