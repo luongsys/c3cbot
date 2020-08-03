@@ -1,6 +1,7 @@
 let path = require("path");
 let fs = require("fs");
 let util = require("util");
+let os = require("os");
 
 module.exports = class Logging {
     #prefix = "INTERNAL";
@@ -62,7 +63,8 @@ module.exports = class Logging {
             ANSI_COLOR_HEADER +
             `[${currentTimeHeader}] ` +
             `[${this.#prefix}]` +
-            colorFormat
+            colorFormat + 
+            os.EOL
         );
 
         // Log to a file
@@ -87,6 +89,8 @@ module.exports = class Logging {
             for (; ;) {
                 if (!fs.existsSync(path.join(
                     process.cwd(),
+                    ".data",
+                    "logs", 
                     "logs-" +
                     this.#fileLogParams.date +
                     "-" +
@@ -98,6 +102,8 @@ module.exports = class Logging {
                     ".log"
                 )) && !fs.existsSync(path.join(
                     process.cwd(),
+                    ".data",
+                    "logs", 
                     "logs-" +
                     this.#fileLogParams.date +
                     "-" +
@@ -114,6 +120,8 @@ module.exports = class Logging {
         fs.appendFileSync(
             path.join(
                 process.cwd(),
+                ".data",
+                "logs", 
                 "logs-" +
                 this.#fileLogParams.date +
                 "-" +
@@ -126,7 +134,11 @@ module.exports = class Logging {
             ),
             `[${currentTimeHeader}] ` +
             `[${this.#prefix}]` +
-            nonColorFormat
+            nonColorFormat + 
+            os.EOL,
+            {
+                flag: "as"
+            }
         );
 
         // Future-proof. SSH logging.
