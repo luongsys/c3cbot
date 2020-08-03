@@ -63,7 +63,7 @@ module.exports = class Logging {
             ANSI_COLOR_HEADER +
             `[${currentTimeHeader}] ` +
             `[${this.#prefix}]` +
-            colorFormat + 
+            colorFormat +
             os.EOL
         );
 
@@ -90,26 +90,26 @@ module.exports = class Logging {
                 if (!fs.existsSync(path.join(
                     process.cwd(),
                     ".data",
-                    "logs", 
+                    "logs",
                     "logs-" +
-                    this.#fileLogParams.date +
+                    String(this.#fileLogParams.date).padStart(2, "0") +
                     "-" +
-                    this.#fileLogParams.month +
+                    String(this.#fileLogParams.month).padStart(2, "0") +
                     "-" +
-                    this.#fileLogParams.year +
+                    String(this.#fileLogParams.year).padStart(4, "0") +
                     "-" +
                     this.#fileLogParams.fileSplit +
                     ".log"
                 )) && !fs.existsSync(path.join(
                     process.cwd(),
                     ".data",
-                    "logs", 
+                    "logs",
                     "logs-" +
-                    this.#fileLogParams.date +
+                    String(this.#fileLogParams.date).padStart(2, "0") +
                     "-" +
-                    this.#fileLogParams.month +
+                    String(this.#fileLogParams.month).padStart(2, "0") +
                     "-" +
-                    this.#fileLogParams.year +
+                    String(this.#fileLogParams.year).padStart(4, "0") +
                     "-" +
                     this.#fileLogParams.fileSplit +
                     ".log.gz"
@@ -121,24 +121,21 @@ module.exports = class Logging {
             path.join(
                 process.cwd(),
                 ".data",
-                "logs", 
+                "logs",
                 "logs-" +
-                this.#fileLogParams.date +
+                String(this.#fileLogParams.date).padStart(2, "0") +
                 "-" +
-                this.#fileLogParams.month +
+                String(this.#fileLogParams.month).padStart(2, "0") +
                 "-" +
-                this.#fileLogParams.year +
+                String(this.#fileLogParams.year).padStart(4, "0") +
                 "-" +
                 this.#fileLogParams.fileSplit +
                 ".log"
             ),
             `[${currentTimeHeader}] ` +
             `[${this.#prefix}]` +
-            nonColorFormat + 
-            os.EOL,
-            {
-                flag: "as"
-            }
+            nonColorFormat +
+            os.EOL
         );
 
         // Future-proof. SSH logging.
