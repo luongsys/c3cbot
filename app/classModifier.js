@@ -86,6 +86,20 @@ let findFromDir = function findFromDir(startPath, filter, arrayOutput, recursive
     }
 }
 
+// Adding clone function in Function prototype
+Function.prototype.clone = function () {
+    var that = this;
+    var temp = function clonedFunction(...args) {
+        return that.apply(this, args);
+    }
+    for (var key in this) {
+        if (Object.prototype.hasOwnProperty.call(this, key)) {
+            temp[key] = this[key];
+        }
+    }
+    return temp;
+}
+
 // Adding BigInt support in JSON (de)serialization
 BigInt.prototype.toJSON = function () {
     return this.toString() + "n";
