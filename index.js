@@ -7,7 +7,7 @@ if (!fs.existsSync(path.join(__dirname, ".env"))) {
     fs.copyFileSync(path.join(__dirname, ".env.example"), path.join(__dirname, ".env"), fs.constants.COPYFILE_EXCL);
 }
 let customEnv = require("custom-env");
-customEnv.env();
+customEnv.env("");
 
 global.ensureExists(path.join(__dirname, ".data"));
 
