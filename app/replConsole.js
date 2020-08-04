@@ -30,5 +30,5 @@ global.replConsole = repl.start({
 });
 
 global.replConsole.on("line", (value) => {
-    console.log(`CONSOLE issued a command:`, value);
+    console.log("CONSOLE issued a command:", value);
 });
