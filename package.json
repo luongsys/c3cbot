@@ -25,7 +25,8 @@
   "dependencies": {
     "buffer-json": "^2.0.0",
     "custom-env": "^2.0.1",
-    "dotenv": "^8.2.0"
+    "dotenv": "^8.2.0",
+    "ssh2": "^0.8.9"
   },
   "devDependencies": {
     "babel-eslint": "^10.1.0",

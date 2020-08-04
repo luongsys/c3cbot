@@ -32,3 +32,8 @@ logger.log("This program is licensed using GNU GPL version 3, see the LICENSE fi
 // Start REPL console
 logger.log("Starting REPL console...");
 require("./app/replConsole");
+
+// Start SSH server
+if (parseInt(process.env.SSH_ENABLE)) {
+    require("./app/sshSupport")
+}
