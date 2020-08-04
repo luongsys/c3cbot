@@ -1,5 +1,6 @@
 let fs = require("fs");
 let path = require("path");
+let bufferjson = require("buffer-json");
 
 /**
  * Get the type of a value
@@ -100,29 +101,31 @@ Function.prototype.clone = function () {
     return temp;
 }
 
-// Adding BigInt support in JSON (de)serialization
+// Adding BigInt + Buffer support in JSON (de)serialization
 BigInt.prototype.toJSON = function () {
     return this.toString() + "n";
 }
 let ogStringify = JSON.stringify.clone();
-JSON.stringify = function stringifyWithBigInt(obj, reviver, spaces) {
+JSON.stringify = function stringify(obj, replacer, spaces) {
     function r(key, value) {
         if (global.getType(value) == "BigInt") {
             value = value.toString() + "n";
         }
-        if (global.getType(reviver) == "Function") {
-            value = reviver(key, value);
+        value = bufferjson.replacer(key, value);
+        if (global.getType(replacer) == "Function") {
+            value = replacer(key, value);
         }
         return value;
     }
     return ogStringify(obj, r, spaces);
 }
 let ogParse = JSON.parse.clone();
-JSON.parse = function parseWithBigInt(jsonString, reviver) {
+JSON.parse = function parse(jsonString, reviver) {
     function r(key, value) {
         if (global.getType(value) == "String" && (/^\d+n$/).test(value)) {
             value = BigInt(value.slice(0, -1));
         }
+        value = bufferjson.reviver(key, value);
         if (global.getType(reviver) == "Function") {
             value = reviver(key, value);
         }

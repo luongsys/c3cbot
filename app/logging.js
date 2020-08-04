@@ -72,6 +72,9 @@ module.exports = class Logging {
             colorFormat +
             os.EOL
         );
+        
+        // Rewriting the REPL prompt (if any)
+        if (global.replConsole) global.replConsole.prompt(true);
 
         // Log to a file
         global.ensureExists(path.join(process.cwd(), "logs")); // Ensure that ./logs directory exists.
