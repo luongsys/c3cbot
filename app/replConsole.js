@@ -28,3 +28,7 @@ global.replConsole = repl.start({
         return [hits.length ? hits : cList, hits.length === 1 ? hits[0] : line];
     }
 });
+
+global.replConsole.on("line", (value) => {
+    console.log(`CONSOLE issued a command:`, value);
+});

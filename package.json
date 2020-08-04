@@ -23,6 +23,7 @@
   },
   "homepage": "https://github.com/c3cbot/c3cbot#readme",
   "dependencies": {
+    "buffer-json": "^2.0.0",
     "custom-env": "^2.0.1",
     "dotenv": "^8.2.0"
   },

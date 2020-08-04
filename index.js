@@ -1,34 +1,83 @@
-let fs = require("fs");
-let path = require("path");
+(async () => {
+    var semver = require("semver");
+    var nodeVersion = semver.parse(process.version);
+    if (nodeVersion.major < 12 || (nodeVersion.major == 12 && nodeVersion.minor < 9)) {
+        console.error("ERROR: Node.JS 12+ (>=12.9) required in this version!");
+        console.error("Node.JS version running this bot:", process.version);
+        process.exit(1);
+    }
 
-Object.assign(global, require("./app/classModifier"));
+    var childProcess = require("child_process");
+    var http = require("http");
+    var fs = require("fs");
+    var path = require("path");
 
-if (!fs.existsSync(path.join(__dirname, ".env"))) {
-    fs.copyFileSync(path.join(__dirname, ".env.example"), path.join(__dirname, ".env"), fs.constants.COPYFILE_EXCL);
-}
+    //Heroku: Run a dummy HTTP server. Why? https://i.imgur.com/KgsYleA.png
+    //This dummy will have another purpose. Coming soon...
+    var herokuCompatible = http.createServer(function (req, res) {
+        res.writeHead(200, "OK", {
+            "Content-Type": "text/plain"
+        });
+        res.write("This is just a dummy HTTP server to fool Heroku. https://i.imgur.com/KgsYleA.png \r\nC3CBot - https://github.com/lequanglam/c3c");
+        res.end();
+    });
+    herokuCompatible.listen(process.env.PORT || 0, "0.0.0.0");
 
-require("dotenv").config();
-////let customEnv = require("custom-env");
-////customEnv.env("");
+    function spawn(cmd, arg) {
+        return new Promise(resolve => {
+            var npmProcess = childProcess.spawn(cmd, arg, {
+                shell: true,
+                stdio: "inherit",
+                cwd: __dirname
+            });
+            npmProcess.on("close", function (code) {
+                resolve(code);
+            });
+        });
+    }
 
-global.ensureExists(path.join(__dirname, ".data"));
+    /**
+     * C3CLoader Function
+     *
+     * @param   {boolean}    first  First time?
+     *
+     * @return  {undefined}         Nothing
+     */
+    async function loader(first) {
+        if (!first) {
+            console.log();
+            console.log("[Loader] 7378278/RESTART error code found. Restarting...");
+        }
+        if (fs.existsSync(path.join(__dirname, "c3c-nextbootupdate"))) {
+            await (spawn("npm", ["--production", "install"])
+                .then(() => spawn("npm", ["--depth", "9999", "update"]))
+                .then(() => {
+                    fs.unlinkSync(path.join(__dirname, "c3c-nextbootupdate"));
+                })
+                .catch(() => { }));
+        }
+        var child = childProcess.spawn("node", ["--experimental-repl-await", "--trace-warnings", "main.js"], {
+            cwd: __dirname,
+            maxBuffer: 16384 * 1024,
+            stdio: "inherit",
+            shell: true
+        });
+        child.on("close", async (code) => {
+            //UNIX, why? (limited to 8-bit)
+            //Original code: 7378278
+            if (code % 256 == 102) {
+                await loader(false);
+                return;
+            }
 
-let centralData = new (require("./app/storage/" + process.env.CENTRAL_STORAGE_TYPE))(__dirname);
-global.centralData = centralData;
-
-// Get a logger
-let Logging = require("./app/logging");
-let logger = new Logging();
-console.log = logger.log.bind(logger);
-let cError = new Logging("INTERNAL-ERROR");
-console.error = cError.log.bind(cError);
-
-// Output header
-logger.log("C3CBot v1.0-beta  Copyright (C) 2020  UIRI");
-logger.log("This program comes with ABSOLUTELY NO WARRANTY.");
-logger.log("This is free software, and you are welcome to redistribute it under certain conditions.");
-logger.log("This program is licensed using GNU GPL version 3, see the LICENSE file for details.");
-
-// Start REPL console
-logger.log("Starting REPL console...");
-require("./app/replConsole");
+            console.log();
+            console.log(`[Loader] main.js throw ${code} (not 7378278/RESTART). Shutting down...`);
+            process.exit();
+        });
+        child.on("error", function (err) {
+            console.log();
+            console.log("[Loader] Error:", err);
+        });
+    }
+    await loader(true);
+})();
