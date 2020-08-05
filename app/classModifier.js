@@ -3,6 +3,21 @@ let path = require("path");
 let bufferjson = require("buffer-json");
 
 /**
+ * Just like require(...), but uses JS codes instead of file path
+ *
+ * @param   {string}  src       Source code
+ * @param   {string}  filename  File name
+ *
+ * @return  {any}               module.exports of source code
+ */
+function requireFromString(src, filename) {
+    var Module = module.constructor;
+    var m = new Module();
+    m._compile(src, filename);
+    return m.exports;
+}
+
+/**
  * Get the type of a value
  *
  * @param   {any}     val  A value
@@ -134,4 +149,4 @@ JSON.parse = function parse(jsonString, reviver) {
     return ogParse(jsonString, r);
 }
 
-module.exports = { getType, ensureExists, findFromDir };
+module.exports = { getType, ensureExists, findFromDir, requireFromString };

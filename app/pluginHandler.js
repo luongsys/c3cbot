@@ -46,19 +46,21 @@ let loadPlugin = async function loadPlugin(file, loadAll) {
         } catch (_) {
             throw new LoadPluginError("Invalid format (not a ZIP-compatible file)", { errorCode: 1 });
         }
-        let pluginInfo = zip.getEntry("plugins.json");
+        let pluginInfo = zip.readAsText("plugins.json");
         let newRootDIR = "";
-        if (!pluginInfo) {
+        if (global.getType(pluginInfo) !== "String") {
             let zipEntries = zip.getEntries();
             newRootDIR = zipEntries.reduce((a, v) => {
-                let r = v.split("/")[0];
+                let r = v.name.split("/")[0];
+                if (r.length === 0) return 9;
                 if (!a) return r;
                 if (a === r) return r;
                 return 9;
             });
             if (newRootDIR === 9) throw new LoadPluginError("plugins.json file not found", { errorCode: 2 });
-            pluginInfo = zip.getEntry(`${newRootDIR}/plugins.json`);
-            if (!pluginInfo) throw new LoadPluginError("plugins.json file not found", { errorCode: 2 });
+            pluginInfo = zip.readAsText(`${newRootDIR}/plugins.json`);
+            if (global.getType(pluginInfo) !== "String") 
+                throw new LoadPluginError("plugins.json file not found", { errorCode: 2 });
         }
         let pInfo = null;
         try {
@@ -135,6 +137,53 @@ let loadPlugin = async function loadPlugin(file, loadAll) {
                 }
             }
         }
+
+        // Great, now execute the executable
+        let resolvedExecPath = newRootDIR.length ? `${newRootDIR}/${pInfo.execFile}` : pInfo.execFile;
+        let executable = zip.readAsText(resolvedExecPath);
+        if (global.getType(executable) === "String") {
+            try {
+                let onLoad = global.requireFromString(executable, resolvedExecPath);
+                if (
+                    global.getType(onLoad) !== "Function" &&
+                    global.getType(onLoad) !== "AsyncFunction"
+                ) throw new LoadPluginError("module.exports of executable code is not a Function/AsyncFunction", {
+                    errorCode: 14
+                });
+
+                // Add the fricking ZIP handler first
+                global.plugins.zipHandler[pInfo.scopeName] = zip;
+
+                let returnData = null;
+                try {
+                    returnData = await onLoad();
+                    global.plugins.pluginScope[pInfo.scopeName] = returnData;
+                } catch (ex) {
+                    throw new LoadPluginError("Malformed JavaScript code in executable file.", {
+                        errorCode: 13,
+                        error: ex
+                    });
+                }
+
+                if (
+                    global.getType(returnData) === "Object" && 
+                    global.getType()
+                ) {
+                    // TODO: insert command handler here
+                }
+            } catch (ex) {
+                throw new LoadPluginError("Malformed JavaScript code in executable file.", {
+                    errorCode: 13,
+                    error: ex
+                })
+            }
+        } else throw new LoadPluginError(
+            `Executable file not found (${resolvedExecPath})`,
+            {
+                errorCode: 12,
+                resolvedExecPath
+            }
+        );
     } else {
         throw "No such file or directory."
     }
