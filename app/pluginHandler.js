@@ -185,7 +185,7 @@ let loadPlugin = async function loadPlugin(file, loadAll) {
             }
         );
     } else {
-        throw "No such file or directory."
+        throw new LoadPluginError("File doesn't exist on that location.", { errorCode: 15 });
     }
 }
 
@@ -208,7 +208,7 @@ let unloadPlugin = async function unloadPlugin(name) {
             if (pl.dep.indexOf(name) + 1) await unloadPlugin(pl.name);
         }
     } else {
-        throw "There's no plugin with that name.";
+        throw new LoadPluginError("There's no plugin with that name.", { errorCode: 15 });;
     }
 }
 
