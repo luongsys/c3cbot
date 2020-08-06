@@ -1,6 +1,8 @@
 let AdmZip = require("adm-zip");
 let fs = require("fs");
 let semver = require("semver");
+let Logger = require("./logging");
+let { log } = new Logger("PluginHandler");
 
 class LoadPluginError extends Error {
     constructor(str, obj) {
@@ -14,6 +16,12 @@ global.plugins = {
     pluginScope: {},
     zipHandler: {},
     tempLoadPass2: []
+};
+
+global.commandMapping = {
+    cmdList: [],
+    aliases: {},
+    hook: {}
 };
 
 let sortPass2 = function sortPass2() {
@@ -167,9 +175,45 @@ let loadPlugin = async function loadPlugin(file, loadAll) {
 
                 if (
                     global.getType(returnData) === "Object" && 
-                    global.getType()
+                    global.getType(pInfo.defineCommand) === "Object"
                 ) {
-                    // TODO: insert command handler here
+                    for (let cmd in pInfo.defineCommand) {
+                        if (global.getType(pInfo.defineCommand[cmd].scope) !== "String") {
+                            log(`${pInfo.name}: Command "${cmd}" is missing a parameter ("scope")`);
+                            continue;
+                        }
+                        if (global.getType(pInfo.defineCommand[cmd].compatibly) !== "Array") {
+                            log(`${pInfo.name}: Command "${cmd}" is missing a parameter ("compatibly")`);
+                            continue;
+                        }
+                        if (
+                            global.getType(global.plugins.pluginScope[pInfo.scopeName][pInfo.defineCommand[cmd].scope]) !== "Function" &&
+                            global.getType(global.plugins.pluginScope[pInfo.scopeName][pInfo.defineCommand[cmd].scope]) !== "AsyncFunction"
+                        ) {
+                            log(`${pInfo.name}: Command "${cmd}" reference to non-existing function in scope ("${pInfo.defineCommand[cmd].scope}")`);
+                            continue;
+                        }
+                        let conflictID = global.commandMapping.cmdList.findIndex(v => v === cmd);
+                        let isConflict = Boolean(conflictID + 1);
+                        let commandID = global.commandMapping.cmdList.push({
+                            originalCMD: cmd,
+                            namespacedCMD: `${pInfo.scopeName}:${cmd}`,
+                            conflict: isConflict,
+                            supportedPlatform: pInfo.defineCommand[cmd].compatibly,
+                            scope: pInfo.scopeName,
+                            exec: global.plugins.pluginScope[pInfo.scopeName][pInfo.defineCommand[cmd].scope]
+                        });
+                        if (!isConflict) {
+                            global.commandMapping.aliases[cmd] = {
+                                pointTo: commandID,
+                                scope: pInfo.scopeName
+                            };
+                        }
+                        global.commandMapping.aliases[`${pInfo.scopeName}:${cmd}`] = {
+                            pointTo: commandID,
+                            scope: pInfo.scopeName
+                        };
+                    }
                 }
             } catch (ex) {
                 throw new LoadPluginError("Malformed JavaScript code in executable file.", {
@@ -199,16 +243,26 @@ let unloadPlugin = async function unloadPlugin(name) {
                 scope.onUnload();
             } catch (_) { }
         }
-        for (let cmd in global.cmdList) {
-            if (global.cmdList[cmd].scope === scopeName) {
-                delete global.cmdList[cmd];
+        for (let id in global.commandMapping.cmdList) {
+            if (global.commandMapping.cmdList[id].scope === scopeName) {
+                delete global.commandMapping.cmdList[id];
+            }
+        }
+        for (let alias in global.commandMapping.aliases) {
+            let cID = global.commandMapping.aliases[alias].pointTo;
+            if (global.getType(global.commandMapping.cmdList[cID]) !== "Object") {
+                log(`Alias "${alias}" no longer point to a valid command ID (${cID}). Deleting...`);
+                delete global.commandMapping.aliases[alias];
             }
         }
         for (let pl of global.plugins.loadedPlugins) {
             if (pl.dep.indexOf(name) + 1) await unloadPlugin(pl.name);
         }
+        delete global.plugins.pluginScope[scopeName];
+        delete global.plugins.loadedPlugins[index];
+        log("Unloaded plugin:", name);
     } else {
-        throw new LoadPluginError("There's no plugin with that name.", { errorCode: 15 });;
+        throw new LoadPluginError("There's no plugin with that name.", { errorCode: 15 });
     }
 }
 
