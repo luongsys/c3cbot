@@ -1,6 +1,7 @@
 let AdmZip = require("adm-zip");
 let fs = require("fs");
 let semver = require("semver");
+let path = require("path");
 let Logger = require("./logging");
 let { log } = new Logger("PluginHandler");
 
@@ -59,7 +60,7 @@ let loadPlugin = async function loadPlugin(file, loadAll) {
         if (global.getType(pluginInfo) !== "String") {
             let zipEntries = zip.getEntries();
             newRootDIR = zipEntries.reduce((a, v) => {
-                let r = v.name.split("/")[0];
+                let r = v.entryName.split("/")[0];
                 if (r.length === 0) return 9;
                 if (!a) return r;
                 if (a === r) return r;
@@ -67,7 +68,7 @@ let loadPlugin = async function loadPlugin(file, loadAll) {
             });
             if (newRootDIR === 9) throw new LoadPluginError("plugins.json file not found", { errorCode: 2 });
             pluginInfo = zip.readAsText(`${newRootDIR}/plugins.json`);
-            if (global.getType(pluginInfo) !== "String") 
+            if (global.getType(pluginInfo) !== "String")
                 throw new LoadPluginError("plugins.json file not found", { errorCode: 2 });
         }
         let pInfo = null;
@@ -164,7 +165,31 @@ let loadPlugin = async function loadPlugin(file, loadAll) {
 
                 let returnData = null;
                 try {
-                    returnData = await onLoad();
+                    returnData = await onLoad({
+                        log: (new Logger(pInfo.name, true)).log,
+                        getPluginFile: (function (zip, rootDir) {
+                            return function getFileInsidePlugin(filePath) {
+                                if (global.getType(filePath) !== "String") return null;
+                                let absoluteFilePath = path.join("/", filePath);
+                                return zip.readFile(rootDir + absoluteFilePath);
+                            }
+                        })(zip, newRootDIR),
+                        getPluginDirectory: (function (zip, rootDir) {
+                            return function getPluginDirectory(dir, recursive) {
+                                if (global.getType(dir) !== "String") return null;
+                                let absoluteFilePath = rootDir + path.join("/", dir);
+                                let zipListing = zip.getEntries()
+                                    .filter(v => {
+                                        let n = v.entryName;
+                                        let pass1 = n.startsWith(absoluteFilePath);
+                                        let pass2 = (n.split("/").length == dir.split("/").length) || recursive;
+                                        return pass1 && pass2
+                                    })
+                                    .map(v => v.entryName);
+                                return zipListing;
+                            }
+                        })(zip, newRootDIR),
+                    });
                     global.plugins.pluginScope[pInfo.scopeName] = returnData;
                 } catch (ex) {
                     throw new LoadPluginError("Malformed JavaScript code in executable file.", {
@@ -174,7 +199,7 @@ let loadPlugin = async function loadPlugin(file, loadAll) {
                 }
 
                 if (
-                    global.getType(returnData) === "Object" && 
+                    global.getType(returnData) === "Object" &&
                     global.getType(pInfo.defineCommand) === "Object"
                 ) {
                     for (let cmd in pInfo.defineCommand) {
@@ -187,8 +212,10 @@ let loadPlugin = async function loadPlugin(file, loadAll) {
                             continue;
                         }
                         if (
-                            global.getType(global.plugins.pluginScope[pInfo.scopeName][pInfo.defineCommand[cmd].scope]) !== "Function" &&
-                            global.getType(global.plugins.pluginScope[pInfo.scopeName][pInfo.defineCommand[cmd].scope]) !== "AsyncFunction"
+                            global.getType(global.plugins.pluginScope[pInfo.scopeName]) !== "Object" || (
+                                global.getType(global.plugins.pluginScope[pInfo.scopeName][pInfo.defineCommand[cmd].scope]) !== "Function" &&
+                                global.getType(global.plugins.pluginScope[pInfo.scopeName][pInfo.defineCommand[cmd].scope]) !== "AsyncFunction"
+                            )
                         ) {
                             log(`${pInfo.name}: Command "${cmd}" reference to non-existing function in scope ("${pInfo.defineCommand[cmd].scope}")`);
                             continue;
