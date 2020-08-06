@@ -2,6 +2,7 @@ let AdmZip = require("adm-zip");
 let fs = require("fs");
 let semver = require("semver");
 let path = require("path");
+let sanitizer = require("sanitize-filename");
 let Logger = require("./logging");
 let { log } = new Logger("PluginHandler");
 
@@ -81,6 +82,8 @@ let loadPlugin = async function loadPlugin(file, loadAll) {
         // Check for plugin parameters
         if (global.getType(pInfo.name) !== "String")
             throw new LoadPluginError("Plugin name must be a string.", { errorCode: 6 });
+        if (sanitizer(pInfo.name).length === 0)
+            throw new LoadPluginError("Plugin name containing only invalid character.", { errorCode: 16 });
         if (global.getType(pInfo.execFile) !== "String")
             throw new LoadPluginError("Executable file path must be a string.", { errorCode: 7 });
         if (global.getType(pInfo.scopeName) !== "String")
@@ -162,6 +165,9 @@ let loadPlugin = async function loadPlugin(file, loadAll) {
 
                 // Add the fricking ZIP handler first
                 global.plugins.zipHandler[pInfo.scopeName] = zip;
+                // Creating a folder to store plugin's data
+                let pluginDataPath = path.join(process.cwd(), ".data", "pluginData", sanitizer(pInfo.name));
+                global.ensureExists(pluginDataPath, 0o666);
 
                 let returnData = null;
                 try {
@@ -170,14 +176,14 @@ let loadPlugin = async function loadPlugin(file, loadAll) {
                         getPluginFile: (function (zip, rootDir) {
                             return function getFileInsidePlugin(filePath) {
                                 if (global.getType(filePath) !== "String") return null;
-                                let absoluteFilePath = path.join("/", filePath);
+                                let absoluteFilePath = path.posix.join("/", filePath);
                                 return zip.readFile(rootDir + absoluteFilePath);
                             }
                         })(zip, newRootDIR),
                         getPluginDirectory: (function (zip, rootDir) {
                             return function getPluginDirectory(dir, recursive) {
                                 if (global.getType(dir) !== "String") return null;
-                                let absoluteFilePath = rootDir + path.join("/", dir);
+                                let absoluteFilePath = rootDir + path.posix.join("/", dir);
                                 let zipListing = zip.getEntries()
                                     .filter(v => {
                                         let n = v.entryName;
@@ -189,6 +195,38 @@ let loadPlugin = async function loadPlugin(file, loadAll) {
                                 return zipListing;
                             }
                         })(zip, newRootDIR),
+                        readPluginDataFile: (function (rootData) {
+                            return function readPluginDataFile(filePath, encoding) {
+                                if (global.getType(filePath) !== "String") return null;
+                                let relativeFilePath = path.join("/", filePath);
+                                let absoluteFilePath = path.join(rootData, relativeFilePath);
+                                try {
+                                    return fs.readFileSync(absoluteFilePath, {
+                                        encoding
+                                    });
+                                } catch (e) {
+                                    return null;
+                                }
+                            }
+                        })(pluginDataPath),
+                        writePluginDataFile: (function (rootData) {
+                            return function writePluginDataFile(filePath, data, encoding) {
+                                if (global.getType(filePath) !== "String") return null;
+                                let relativeFilePath = path.join("/", filePath);
+                                let absoluteFilePath = path.join(rootData, relativeFilePath);
+                                return fs.writeFileSync(absoluteFilePath, data, {
+                                    encoding
+                                });
+                            }
+                        })(pluginDataPath),
+                        removePluginDataFile: (function (rootData) {
+                            return function writePluginDataFile(filePath) {
+                                if (global.getType(filePath) !== "String") return null;
+                                let relativeFilePath = path.join("/", filePath);
+                                let absoluteFilePath = path.join(rootData, relativeFilePath);
+                                return fs.unlinkSync(absoluteFilePath);
+                            }
+                        })(pluginDataPath)
                     });
                     global.plugins.pluginScope[pInfo.scopeName] = returnData;
                 } catch (ex) {
@@ -235,6 +273,8 @@ let loadPlugin = async function loadPlugin(file, loadAll) {
                                 pointTo: commandID,
                                 scope: pInfo.scopeName
                             };
+                        } else {
+                            global.commandMapping.cmdList[conflictID].conflict = true;
                         }
                         global.commandMapping.aliases[`${pInfo.scopeName}:${cmd}`] = {
                             pointTo: commandID,
@@ -270,11 +310,13 @@ let unloadPlugin = async function unloadPlugin(name) {
                 scope.onUnload();
             } catch (_) { }
         }
+        // Command removing by ID
         for (let id in global.commandMapping.cmdList) {
             if (global.commandMapping.cmdList[id].scope === scopeName) {
                 delete global.commandMapping.cmdList[id];
             }
         }
+        // Alias removing
         for (let alias in global.commandMapping.aliases) {
             let cID = global.commandMapping.aliases[alias].pointTo;
             if (global.getType(global.commandMapping.cmdList[cID]) !== "Object") {
@@ -282,6 +324,8 @@ let unloadPlugin = async function unloadPlugin(name) {
                 delete global.commandMapping.aliases[alias];
             }
         }
+        // TODO: Resolve command conflict again right here.
+        
         for (let pl of global.plugins.loadedPlugins) {
             if (pl.dep.indexOf(name) + 1) await unloadPlugin(pl.name);
         }
