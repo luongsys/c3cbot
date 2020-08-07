@@ -63,7 +63,16 @@ module.exports = class Logging {
         }
 
         // Log to the console
-        process.stdout.write(
+        console.log(
+            ANSI_CLEAR_LINE +
+            ANSI_CARTIDGE_RETURN +
+            ANSI_COLOR_HEADER +
+            `[${currentTimeHeader}]`,
+            `[${this.#prefix}]` +
+            colorFormat
+        )
+        // This code below is not DevTools-compatible
+        /* process.stdout.write(
             ANSI_CLEAR_LINE + 
             ANSI_CARTIDGE_RETURN +
             ANSI_COLOR_HEADER +
@@ -71,7 +80,7 @@ module.exports = class Logging {
             `[${this.#prefix}]` +
             colorFormat +
             os.EOL
-        );
+        ); */
         
         // Rewriting the REPL prompt (if any)
         if (global.replConsole) global.replConsole.prompt(true);
