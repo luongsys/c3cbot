@@ -63,24 +63,27 @@ module.exports = class Logging {
         }
 
         // Log to the console
-        console.log(
-            ANSI_CLEAR_LINE +
-            ANSI_CARTIDGE_RETURN +
-            ANSI_COLOR_HEADER +
-            `[${currentTimeHeader}]`,
-            `[${this.#prefix}]` +
-            colorFormat
-        )
-        // This code below is not DevTools-compatible
-        /* process.stdout.write(
-            ANSI_CLEAR_LINE + 
-            ANSI_CARTIDGE_RETURN +
-            ANSI_COLOR_HEADER +
-            `[${currentTimeHeader}] ` +
-            `[${this.#prefix}]` +
-            colorFormat +
-            os.EOL
-        ); */
+        if (global.getType(console.original) !== "Object") {
+            process.stdout.write(
+                ANSI_CLEAR_LINE + 
+                ANSI_CARTIDGE_RETURN +
+                ANSI_COLOR_HEADER +
+                `[${currentTimeHeader}] ` +
+                `[${this.#prefix}]` +
+                colorFormat +
+                os.EOL
+            );
+        } else {
+            console.original.log(
+                ANSI_CLEAR_LINE +
+                ANSI_CARTIDGE_RETURN +
+                ANSI_COLOR_HEADER +
+                `[${currentTimeHeader}]`,
+                `[${this.#prefix}]` +
+                colorFormat
+            );
+        }
+        
         
         // Rewriting the REPL prompt (if any)
         if (global.replConsole) global.replConsole.prompt(true);

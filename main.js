@@ -19,6 +19,10 @@ global.centralData = centralData;
 // Get a logger
 let Logging = require("./app/logging");
 let logger = new Logging();
+console.original = {
+    log: console.log.clone(),
+    error: console.error.clone()
+};
 console.log = logger.log.bind(logger);
 let cError = new Logging("INTERNAL-ERROR");
 console.error = cError.log.bind(cError);
