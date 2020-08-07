@@ -226,7 +226,9 @@ let loadPlugin = async function loadPlugin(file, loadAll) {
                                 let absoluteFilePath = path.join(rootData, relativeFilePath);
                                 return fs.unlinkSync(absoluteFilePath);
                             }
-                        })(pluginDataPath)
+                        })(pluginDataPath),
+                        dataPath: pluginDataPath,
+
                     });
                     global.plugins.pluginScope[pInfo.scopeName] = returnData;
                 } catch (ex) {
@@ -266,7 +268,10 @@ let loadPlugin = async function loadPlugin(file, loadAll) {
                             conflict: isConflict,
                             supportedPlatform: pInfo.defineCommand[cmd].compatibly,
                             scope: pInfo.scopeName,
-                            exec: global.plugins.pluginScope[pInfo.scopeName][pInfo.defineCommand[cmd].scope]
+                            exec: global.plugins.pluginScope[pInfo.scopeName][pInfo.defineCommand[cmd].scope],
+                            helpArgs: pInfo.defineCommand[cmd].helpArgs,
+                            helpDesc: pInfo.defineCommand[cmd].helpDesc,
+                            example: pInfo.defineCommand[cmd].example
                         });
                         if (!isConflict) {
                             global.commandMapping.aliases[cmd] = {
@@ -324,13 +329,25 @@ let unloadPlugin = async function unloadPlugin(name) {
                 delete global.commandMapping.aliases[alias];
             }
         }
-        // TODO: Resolve command conflict again right here.
+        // Resolve command conflict again.
+        let resolveAgain1 = Object.entries(global.commandMapping.aliases);
+        let resolveAgain2 = resolveAgain1.map(x => x[0].split(":")[1]);
+        for (let i in resolveAgain2) {
+            let otherIDs = resolveAgain2.indexOf(resolveAgain2[i]);
+            if (otherIDs + 1) {
+                let commandID = resolveAgain1[otherIDs][1].pointTo;
+                global.commandMapping.cmdList[commandID].conflict = true;
+            }
+            let currentCommandID = resolveAgain1[i][1].pointTo;
+            global.commandMapping.cmdList[currentCommandID].conflict = Boolean(otherIDs + 1);
+        }
         
         for (let pl of global.plugins.loadedPlugins) {
             if (pl.dep.indexOf(name) + 1) await unloadPlugin(pl.name);
         }
         delete global.plugins.pluginScope[scopeName];
         delete global.plugins.loadedPlugins[index];
+        delete global.plugins.zipHandler[scopeName];
         log("Unloaded plugin:", name);
     } else {
         throw new LoadPluginError("There's no plugin with that name.", { errorCode: 15 });
