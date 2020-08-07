@@ -13,18 +13,20 @@ class LoadPluginError extends Error {
     }
 }
 
-global.plugins = {
-    loadedPlugins: [],
-    pluginScope: {},
-    zipHandler: {},
-    tempLoadPass2: []
-};
+if (global.getType(global.plugins) != "Object")
+    global.plugins = {
+        loadedPlugins: [],
+        pluginScope: {},
+        zipHandler: {},
+        tempLoadPass2: []
+    };
 
-global.commandMapping = {
-    cmdList: [],
-    aliases: {},
-    hook: {}
-};
+if (global.getType(global.commandMapping) != "Object")
+    global.commandMapping = {
+        cmdList: [],
+        aliases: {},
+        hook: {}
+    };
 
 let sortPass2 = function sortPass2() {
     let wait = global.plugins.tempLoadPass2;
@@ -112,7 +114,7 @@ let loadPlugin = async function loadPlugin(file, loadAll) {
                 let indexDPlName = global.plugins.loadedPlugins.findIndex(v => v.name === dPlName);
                 let version = pInfo.depends[dPlName];
                 if (indexDPlName + 1) {
-                    let lVersion = global.plugins.loadedPlugins[indexDPlName];
+                    let lVersion = global.plugins.loadedPlugins[indexDPlName].version;
                     // Plugin found, check the version next
                     if (!semver.satisfies(lVersion, String(version)))
                         throw new LoadPluginError(
@@ -154,145 +156,154 @@ let loadPlugin = async function loadPlugin(file, loadAll) {
         let resolvedExecPath = newRootDIR.length ? `${newRootDIR}/${pInfo.execFile}` : pInfo.execFile;
         let executable = zip.readAsText(resolvedExecPath);
         if (global.getType(executable) === "String") {
+            let onLoad = null;
             try {
-                let onLoad = global.requireFromString(executable, resolvedExecPath);
+                onLoad = global.requireFromString(executable, resolvedExecPath);
                 if (
                     global.getType(onLoad) !== "Function" &&
                     global.getType(onLoad) !== "AsyncFunction"
                 ) throw new LoadPluginError("module.exports of executable code is not a Function/AsyncFunction", {
                     errorCode: 14
                 });
-
-                // Add the fricking ZIP handler first
-                global.plugins.zipHandler[pInfo.scopeName] = zip;
-                // Creating a folder to store plugin's data
-                let pluginDataPath = path.join(process.cwd(), ".data", "pluginData", sanitizer(pInfo.name));
-                global.ensureExists(pluginDataPath, 0o666);
-
-                let returnData = null;
-                try {
-                    returnData = await onLoad({
-                        log: (new Logger(pInfo.name, true)).log,
-                        getPluginFile: (function (zip, rootDir) {
-                            return function getFileInsidePlugin(filePath) {
-                                if (global.getType(filePath) !== "String") return null;
-                                let absoluteFilePath = path.posix.join("/", filePath);
-                                return zip.readFile(rootDir + absoluteFilePath);
-                            }
-                        })(zip, newRootDIR),
-                        getPluginDirectory: (function (zip, rootDir) {
-                            return function getPluginDirectory(dir, recursive) {
-                                if (global.getType(dir) !== "String") return null;
-                                let absoluteFilePath = rootDir + path.posix.join("/", dir);
-                                let zipListing = zip.getEntries()
-                                    .filter(v => {
-                                        let n = v.entryName;
-                                        let pass1 = n.startsWith(absoluteFilePath);
-                                        let pass2 = (n.split("/").length == dir.split("/").length) || recursive;
-                                        return pass1 && pass2
-                                    })
-                                    .map(v => v.entryName);
-                                return zipListing;
-                            }
-                        })(zip, newRootDIR),
-                        readPluginDataFile: (function (rootData) {
-                            return function readPluginDataFile(filePath, encoding) {
-                                if (global.getType(filePath) !== "String") return null;
-                                let relativeFilePath = path.join("/", filePath);
-                                let absoluteFilePath = path.join(rootData, relativeFilePath);
-                                try {
-                                    return fs.readFileSync(absoluteFilePath, {
-                                        encoding
-                                    });
-                                } catch (e) {
-                                    return null;
-                                }
-                            }
-                        })(pluginDataPath),
-                        writePluginDataFile: (function (rootData) {
-                            return function writePluginDataFile(filePath, data, encoding) {
-                                if (global.getType(filePath) !== "String") return null;
-                                let relativeFilePath = path.join("/", filePath);
-                                let absoluteFilePath = path.join(rootData, relativeFilePath);
-                                return fs.writeFileSync(absoluteFilePath, data, {
-                                    encoding
-                                });
-                            }
-                        })(pluginDataPath),
-                        removePluginDataFile: (function (rootData) {
-                            return function writePluginDataFile(filePath) {
-                                if (global.getType(filePath) !== "String") return null;
-                                let relativeFilePath = path.join("/", filePath);
-                                let absoluteFilePath = path.join(rootData, relativeFilePath);
-                                return fs.unlinkSync(absoluteFilePath);
-                            }
-                        })(pluginDataPath),
-                        dataPath: pluginDataPath,
-
-                    });
-                    global.plugins.pluginScope[pInfo.scopeName] = returnData;
-                } catch (ex) {
-                    throw new LoadPluginError("Malformed JavaScript code in executable file.", {
-                        errorCode: 13,
-                        error: ex
-                    });
-                }
-
-                if (
-                    global.getType(returnData) === "Object" &&
-                    global.getType(pInfo.defineCommand) === "Object"
-                ) {
-                    for (let cmd in pInfo.defineCommand) {
-                        if (global.getType(pInfo.defineCommand[cmd].scope) !== "String") {
-                            log(`${pInfo.name}: Command "${cmd}" is missing a parameter ("scope")`);
-                            continue;
-                        }
-                        if (global.getType(pInfo.defineCommand[cmd].compatibly) !== "Array") {
-                            log(`${pInfo.name}: Command "${cmd}" is missing a parameter ("compatibly")`);
-                            continue;
-                        }
-                        if (
-                            global.getType(global.plugins.pluginScope[pInfo.scopeName]) !== "Object" || (
-                                global.getType(global.plugins.pluginScope[pInfo.scopeName][pInfo.defineCommand[cmd].scope]) !== "Function" &&
-                                global.getType(global.plugins.pluginScope[pInfo.scopeName][pInfo.defineCommand[cmd].scope]) !== "AsyncFunction"
-                            )
-                        ) {
-                            log(`${pInfo.name}: Command "${cmd}" reference to non-existing function in scope ("${pInfo.defineCommand[cmd].scope}")`);
-                            continue;
-                        }
-                        let conflictID = global.commandMapping.cmdList.findIndex(v => v === cmd);
-                        let isConflict = Boolean(conflictID + 1);
-                        let commandID = global.commandMapping.cmdList.push({
-                            originalCMD: cmd,
-                            namespacedCMD: `${pInfo.scopeName}:${cmd}`,
-                            conflict: isConflict,
-                            supportedPlatform: pInfo.defineCommand[cmd].compatibly,
-                            scope: pInfo.scopeName,
-                            exec: global.plugins.pluginScope[pInfo.scopeName][pInfo.defineCommand[cmd].scope],
-                            helpArgs: pInfo.defineCommand[cmd].helpArgs,
-                            helpDesc: pInfo.defineCommand[cmd].helpDesc,
-                            example: pInfo.defineCommand[cmd].example
-                        });
-                        if (!isConflict) {
-                            global.commandMapping.aliases[cmd] = {
-                                pointTo: commandID,
-                                scope: pInfo.scopeName
-                            };
-                        } else {
-                            global.commandMapping.cmdList[conflictID].conflict = true;
-                        }
-                        global.commandMapping.aliases[`${pInfo.scopeName}:${cmd}`] = {
-                            pointTo: commandID,
-                            scope: pInfo.scopeName
-                        };
-                    }
-                }
             } catch (ex) {
                 throw new LoadPluginError("Malformed JavaScript code in executable file.", {
                     errorCode: 13,
                     error: ex
                 })
             }
+
+            // Add the fricking ZIP handler first
+            global.plugins.zipHandler[pInfo.scopeName] = zip;
+            // Creating a folder to store plugin's data
+            let pluginDataPath = path.join(process.cwd(), ".data", "pluginData", sanitizer(pInfo.name));
+            global.ensureExists(pluginDataPath, 0o666);
+
+            let returnData = null;
+            try {
+                returnData = await onLoad({
+                    log: (new Logger(pInfo.name, true)).log,
+                    getPluginFile: (function (zip, rootDir) {
+                        return function getFileInsidePlugin(filePath) {
+                            if (global.getType(filePath) !== "String") return null;
+                            let absoluteFilePath = path.posix.join("/", filePath);
+                            return zip.readFile(rootDir + absoluteFilePath);
+                        }
+                    })(zip, newRootDIR),
+                    getPluginDirectory: (function (zip, rootDir) {
+                        return function getPluginDirectory(dir, recursive) {
+                            if (global.getType(dir) !== "String") return null;
+                            let absoluteFilePath = rootDir + path.posix.join("/", dir);
+                            let zipListing = zip.getEntries()
+                                .filter(v => {
+                                    let n = v.entryName;
+                                    let pass1 = n.startsWith(absoluteFilePath);
+                                    let pass2 = (n.split("/").length == dir.split("/").length) || recursive;
+                                    return pass1 && pass2
+                                })
+                                .map(v => v.entryName);
+                            return zipListing;
+                        }
+                    })(zip, newRootDIR),
+                    readPluginDataFile: (function (rootData) {
+                        return function readPluginDataFile(filePath, encoding) {
+                            if (global.getType(filePath) !== "String") return null;
+                            let relativeFilePath = path.join("/", filePath);
+                            let absoluteFilePath = path.join(rootData, relativeFilePath);
+                            try {
+                                return fs.readFileSync(absoluteFilePath, {
+                                    encoding
+                                });
+                            } catch (e) {
+                                return null;
+                            }
+                        }
+                    })(pluginDataPath),
+                    writePluginDataFile: (function (rootData) {
+                        return function writePluginDataFile(filePath, data, encoding) {
+                            if (global.getType(filePath) !== "String") return null;
+                            let relativeFilePath = path.join("/", filePath);
+                            let absoluteFilePath = path.join(rootData, relativeFilePath);
+                            return fs.writeFileSync(absoluteFilePath, data, {
+                                encoding
+                            });
+                        }
+                    })(pluginDataPath),
+                    removePluginDataFile: (function (rootData) {
+                        return function writePluginDataFile(filePath) {
+                            if (global.getType(filePath) !== "String") return null;
+                            let relativeFilePath = path.join("/", filePath);
+                            let absoluteFilePath = path.join(rootData, relativeFilePath);
+                            return fs.unlinkSync(absoluteFilePath);
+                        }
+                    })(pluginDataPath),
+                    dataPath: pluginDataPath,
+
+                });
+                global.plugins.pluginScope[pInfo.scopeName] = returnData;
+            } catch (ex) {
+                throw new LoadPluginError("Malformed JavaScript code in executable file.", {
+                    errorCode: 13,
+                    error: ex
+                });
+            }
+
+            if (
+                global.getType(returnData) === "Object" &&
+                global.getType(pInfo.defineCommand) === "Object"
+            ) {
+                for (let cmd in pInfo.defineCommand) {
+                    if (global.getType(pInfo.defineCommand[cmd].scope) !== "String") {
+                        log(`${pInfo.name}: Command "${cmd}" is missing a parameter ("scope")`);
+                        continue;
+                    }
+                    if (global.getType(pInfo.defineCommand[cmd].compatibly) !== "Array") {
+                        log(`${pInfo.name}: Command "${cmd}" is missing a parameter ("compatibly")`);
+                        continue;
+                    }
+                    if (
+                        global.getType(global.plugins.pluginScope[pInfo.scopeName]) !== "Object" || (
+                            global.getType(global.plugins.pluginScope[pInfo.scopeName][pInfo.defineCommand[cmd].scope]) !== "Function" &&
+                            global.getType(global.plugins.pluginScope[pInfo.scopeName][pInfo.defineCommand[cmd].scope]) !== "AsyncFunction"
+                        )
+                    ) {
+                        log(`${pInfo.name}: Command "${cmd}" reference to non-existing function in scope ("${pInfo.defineCommand[cmd].scope}")`);
+                        continue;
+                    }
+                    let conflictID = global.commandMapping.cmdList.findIndex(v => v === cmd);
+                    let isConflict = Boolean(conflictID + 1);
+                    let commandID = global.commandMapping.cmdList.push({
+                        originalCMD: cmd,
+                        namespacedCMD: `${pInfo.scopeName}:${cmd}`,
+                        conflict: isConflict,
+                        supportedPlatform: pInfo.defineCommand[cmd].compatibly,
+                        scope: pInfo.scopeName,
+                        exec: global.plugins.pluginScope[pInfo.scopeName][pInfo.defineCommand[cmd].scope],
+                        helpArgs: pInfo.defineCommand[cmd].helpArgs,
+                        helpDesc: pInfo.defineCommand[cmd].helpDesc,
+                        example: pInfo.defineCommand[cmd].example
+                    });
+                    if (!isConflict) {
+                        global.commandMapping.aliases[cmd] = {
+                            pointTo: commandID,
+                            scope: pInfo.scopeName
+                        };
+                    } else {
+                        global.commandMapping.cmdList[conflictID].conflict = true;
+                    }
+                    global.commandMapping.aliases[`${pInfo.scopeName}:${cmd}`] = {
+                        pointTo: commandID,
+                        scope: pInfo.scopeName
+                    };
+                }
+            }
+            global.plugins.loadedPlugins.push({
+                name: pInfo.name,
+                scopeName: pInfo.scopeName,
+                version: pInfo.version,
+                author: pInfo.author
+            });
+            log("Loaded plugin:", pInfo.name);
+            return { status: 0 };
         } else throw new LoadPluginError(
             `Executable file not found (${resolvedExecPath})`,
             {
@@ -341,7 +352,7 @@ let unloadPlugin = async function unloadPlugin(name) {
             let currentCommandID = resolveAgain1[i][1].pointTo;
             global.commandMapping.cmdList[currentCommandID].conflict = Boolean(otherIDs + 1);
         }
-        
+
         for (let pl of global.plugins.loadedPlugins) {
             if (pl.dep.indexOf(name) + 1) await unloadPlugin(pl.name);
         }
@@ -354,8 +365,37 @@ let unloadPlugin = async function unloadPlugin(name) {
     }
 }
 
+let loadAllPlugin = async function loadAllPlugin(path) {
+    if (fs.existsSync(path)) {
+        let pluginList = global.findFromDir(path, /^.*\.zip$/, true, false);
+        for (let p of pluginList) {
+            try {
+                await loadPlugin(p, true);
+            } catch (e) {
+                log("Error while loading", p + ":", e);
+            }
+        }
+        for (let p2 of global.plugins.tempLoadPass2) {
+            try {
+                await loadPlugin(p2.url, false);
+            } catch (e) {
+                log("Error while loading", p2.url + ":", e);
+            }
+        }
+        global.plugins.tempLoadPass2 = [];
+    } else throw new LoadPluginError("No such directory exist.", { errorCode: 16 });
+}
+
+let unloadAllPlugin = async function unloadAllPlugin() {
+    for (let p of global.plugins.loadedPlugins) {
+        await unloadPlugin(p.name);
+    }
+}
+
 module.exports = {
     loadPlugin,
+    loadAllPlugin,
     unloadPlugin,
+    unloadAllPlugin,
     LoadPluginError
 }
