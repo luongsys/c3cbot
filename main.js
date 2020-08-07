@@ -45,7 +45,7 @@
 
     // Creating an empty plugin folder
     let pluginPath = path.join(process.cwd(), process.env.PLUGIN_PATH);
-    global.ensureExists();
+    global.ensureExists(pluginPath);
     // Load plugins
     global.pluginHandler = require("./app/pluginHandler");
     logger.log("Loading plugins...");
