@@ -40,11 +40,11 @@
 
     // Start SSH server
     if (parseInt(process.env.SSH_ENABLE)) {
-        require("./app/sshSupport")
+        require("./app/sshSupport");
     }
 
-    // Creating an empty plugin folder (:/.data/plugins)
-    let pluginPath = path.join(process.cwd(), ".data", "plugins");
+    // Creating an empty plugin folder
+    let pluginPath = path.join(process.cwd(), process.env.PLUGIN_PATH);
     global.ensureExists();
     // Load plugins
     global.pluginHandler = require("./app/pluginHandler");

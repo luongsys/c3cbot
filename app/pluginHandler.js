@@ -175,7 +175,7 @@ let loadPlugin = async function loadPlugin(file, loadAll) {
             // Add the fricking ZIP handler first
             global.plugins.zipHandler[pInfo.scopeName] = zip;
             // Creating a folder to store plugin's data
-            let pluginDataPath = path.join(process.cwd(), ".data", "pluginData", sanitizer(pInfo.name));
+            let pluginDataPath = path.join(process.cwd(), process.env.PLUGIN_DATA_PATH, sanitizer(pInfo.name));
             global.ensureExists(pluginDataPath, 0o666);
 
             let returnData = null;
