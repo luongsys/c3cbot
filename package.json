@@ -30,6 +30,7 @@
     "buffer-json": "^2.0.0",
     "custom-env": "^2.0.1",
     "dotenv": "^8.2.0",
+    "msgpack5": "^4.2.1",
     "sanitize-filename": "^1.6.3",
     "semver": "^7.3.2",
     "ssh2": "^0.8.9"

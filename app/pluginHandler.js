@@ -237,7 +237,7 @@ let loadPlugin = async function loadPlugin(file, loadAll) {
                         }
                     })(pluginDataPath),
                     dataPath: pluginDataPath,
-
+                    
                 });
                 global.plugins.pluginScope[pInfo.scopeName] = returnData;
             } catch (ex) {

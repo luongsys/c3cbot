@@ -80,4 +80,14 @@ module.exports = class JSONStorage {
         await this.save();
         return status;
     }
+
+    async getTable(table = "default") {
+        await this.reload();
+        if (global.getType(this.#data[table]) !== "Object") {
+            this.#data[table] = {};
+            await this.save();
+        }
+
+        return this.#data[table];
+    }
 }
