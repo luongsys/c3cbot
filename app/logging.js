@@ -7,17 +7,23 @@ const ANSI_CLEAR_LINE = "\x1B[2K";
 const ANSI_CARTIDGE_RETURN = "\x1B[0G";
 
 global.ensureExists(path.join(process.cwd(), ".data", "logs"));
-module.exports = class Logging {
-    #prefix = "INTERNAL";
-    #fileLogParams = {
+
+if (global.getType(global.fileLogParams) !== "Object") {
+    global.fileLogParams = {
         fileSplit: 0,
         date: 1,
         month: 1,
         year: 1970
-    };
+    }
+}
 
-    constructor(prefix = "INTERNAL") {
+module.exports = class Logging {
+    #prefix = "INTERNAL";
+    #isPlugin = false;
+
+    constructor(prefix = "INTERNAL", isPlugin) {
         this.#prefix = String(prefix);
+        this.#isPlugin = Boolean(isPlugin);
     }
 
     log(...val) {
@@ -69,6 +75,7 @@ module.exports = class Logging {
                 ANSI_CARTIDGE_RETURN +
                 ANSI_COLOR_HEADER +
                 `[${currentTimeHeader}] ` +
+                this.#isPlugin ? "[PLUGIN] " : "" +
                 `[${this.#prefix}]` +
                 colorFormat +
                 os.EOL
@@ -79,6 +86,7 @@ module.exports = class Logging {
                 ANSI_CARTIDGE_RETURN +
                 ANSI_COLOR_HEADER +
                 `[${currentTimeHeader}]`,
+                this.#isPlugin ? "[PLUGIN] " : "" +
                 `[${this.#prefix}]` +
                 colorFormat
             );
@@ -91,19 +99,19 @@ module.exports = class Logging {
         // Log to a file
         global.ensureExists(path.join(process.cwd(), "logs")); // Ensure that ./logs directory exists.
         let searchFileSplit = false;
-        if (this.#fileLogParams.date !== currentTime.getUTCDate()) {
-            this.#fileLogParams.date = currentTime.getUTCDate();
-            this.#fileLogParams.fileSplit = 0;
+        if (global.fileLogParams.date !== currentTime.getUTCDate()) {
+            global.fileLogParams.date = currentTime.getUTCDate();
+            global.fileLogParams.fileSplit = 0;
             searchFileSplit = true;
         }
-        if (this.#fileLogParams.month !== currentTime.getUTCMonth() + 1) {
-            this.#fileLogParams.month = currentTime.getUTCMonth() + 1;
-            this.#fileLogParams.fileSplit = 0;
+        if (global.fileLogParams.month !== currentTime.getUTCMonth() + 1) {
+            global.fileLogParams.month = currentTime.getUTCMonth() + 1;
+            global.fileLogParams.fileSplit = 0;
             searchFileSplit = true;
         }
-        if (this.#fileLogParams.year !== currentTime.getUTCFullYear()) {
-            this.#fileLogParams.year = currentTime.getUTCFullYear();
-            this.#fileLogParams.fileSplit = 0;
+        if (global.fileLogParams.year !== currentTime.getUTCFullYear()) {
+            global.fileLogParams.year = currentTime.getUTCFullYear();
+            global.fileLogParams.fileSplit = 0;
             searchFileSplit = true;
         }
         if (searchFileSplit) {
@@ -113,29 +121,29 @@ module.exports = class Logging {
                     ".data",
                     "logs",
                     "logs-" +
-                    String(this.#fileLogParams.date).padStart(2, "0") +
+                    String(global.fileLogParams.date).padStart(2, "0") +
                     "-" +
-                    String(this.#fileLogParams.month).padStart(2, "0") +
+                    String(global.fileLogParams.month).padStart(2, "0") +
                     "-" +
-                    String(this.#fileLogParams.year).padStart(4, "0") +
+                    String(global.fileLogParams.year).padStart(4, "0") +
                     "-" +
-                    this.#fileLogParams.fileSplit +
+                    global.fileLogParams.fileSplit +
                     ".log"
                 )) && !fs.existsSync(path.join(
                     process.cwd(),
                     ".data",
                     "logs",
                     "logs-" +
-                    String(this.#fileLogParams.date).padStart(2, "0") +
+                    String(global.fileLogParams.date).padStart(2, "0") +
                     "-" +
-                    String(this.#fileLogParams.month).padStart(2, "0") +
+                    String(global.fileLogParams.month).padStart(2, "0") +
                     "-" +
-                    String(this.#fileLogParams.year).padStart(4, "0") +
+                    String(global.fileLogParams.year).padStart(4, "0") +
                     "-" +
-                    this.#fileLogParams.fileSplit +
+                    global.fileLogParams.fileSplit +
                     ".log.gz"
                 ))) break;
-                this.#fileLogParams.fileSplit++;
+                global.fileLogParams.fileSplit++;
             }
         }
         fs.appendFileSync(
@@ -144,16 +152,17 @@ module.exports = class Logging {
                 ".data",
                 "logs",
                 "logs-" +
-                String(this.#fileLogParams.date).padStart(2, "0") +
+                String(global.fileLogParams.date).padStart(2, "0") +
                 "-" +
-                String(this.#fileLogParams.month).padStart(2, "0") +
+                String(global.fileLogParams.month).padStart(2, "0") +
                 "-" +
-                String(this.#fileLogParams.year).padStart(4, "0") +
+                String(global.fileLogParams.year).padStart(4, "0") +
                 "-" +
-                this.#fileLogParams.fileSplit +
+                global.fileLogParams.fileSplit +
                 ".log"
             ),
             `[${currentTimeHeader}] ` +
+            this.#isPlugin ? "[PLUGIN] " : "" +
             `[${this.#prefix}]` +
             nonColorFormat +
             os.EOL
@@ -163,7 +172,7 @@ module.exports = class Logging {
         if (global.getType(global.sshTerminal) === "Object") {
             for (let ip in global.sshTerminal) {
                 // Get the SSH terminal instance to log. 
-                global.sshTerminal[ip].log.call(global.sshTerminal[ip], [currentTimeHeader, this.#prefix, ...val]);
+                global.sshTerminal[ip].log.call(global.sshTerminal[ip], [this.#isPlugin, currentTimeHeader, this.#prefix, ...val]);
             }
         }
     }

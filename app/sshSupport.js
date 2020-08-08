@@ -3,14 +3,22 @@ let path = require("path");
 let ssh2 = require("ssh2");
 let crypto = require("crypto");
 let repl = require("repl");
+let util = require("util");
 let Logging = require("./logging");
 let { log } = new Logging("SSH");
+
+const ANSI_CLEAR_LINE = "\x1B[2K";
+const ANSI_CLEAR_SCREEN = "\x1B[2J\x1B[3J";
+const ANSI_CURSOR_TOPLEFT = "\x1B[;H";
+const ANSI_CARTIDGE_RETURN = "\x1B[0G";
 
 global.sshTerminal = {};
 
 class SSHInterface {
     shell = null;
     buffer = "";
+    cols = 0;
+    rows = 0;
 
     constructor(info, session) {
         this.info = info;
@@ -52,9 +60,81 @@ class SSHInterface {
             });
 
             this.replConsole.on("line", (value) => {
-                console.log(`${info.ip}:${info.port} issued a command:`, value);
+                log(`${info.ip}:${info.port} issued a command:`, value);
             });
         });
+
+        session.once("pty", (accept, reject, screen) => {
+            log(`${info.ip}:${info.port} created a terminal (size: ${screen.cols}x${screen.rows})`);
+            this.cols = screen.cols;
+            this.rows = screen.rows;
+            accept();
+        });
+
+        session.once("window-change", (accept, reject, screen) => {
+            log(`${info.ip}:${info.port} changed terminal size: ${this.cols}x${this.rows} => ${screen.cols}x${screen.rows})`);
+            this.cols = screen.cols;
+            this.rows = screen.rows;
+            if (this.shell) {
+                this.shell.stdout.write(
+                    ANSI_CLEAR_SCREEN + 
+                    ANSI_CURSOR_TOPLEFT + 
+                    this.buffer
+                );
+            }
+            if (this.replConsole) {
+                this.replConsole.prompt(true);
+            }
+            accept();
+        });
+    }
+
+    log(isPlugin, currentTimeHeader, prefix, ...val) {
+        // Get ANSI color header based on config
+        let redColorValue = parseInt(process.env.CONSOLE_LOG_COLOR.substr(0, 2), 16);
+        let greenColorValue = parseInt(process.env.CONSOLE_LOG_COLOR.substr(2, 2), 16);
+        let blueColorValue = parseInt(process.env.CONSOLE_LOG_COLOR.substr(4, 2), 16);
+        if (
+            isNaN(redColorValue) ||
+            isNaN(greenColorValue) ||
+            isNaN(blueColorValue)
+        ) {
+            redColorValue = 0;
+            greenColorValue = 255;
+            blueColorValue = 0;
+        }
+        let ANSI_COLOR_HEADER = `\x1B[38;2;${redColorValue};${greenColorValue};${blueColorValue}m`;
+
+        // Format values to string
+        let colorFormat = "";
+        for (let value of val) {
+            if (typeof value == "object") {
+                colorFormat += " " + util.formatWithOptions({
+                    colors: true
+                }, "%O", value);
+            } else {
+                colorFormat += " " + util.formatWithOptions({
+                    colors: true
+                }, "%s", value);
+            }
+        }
+
+        let d = (
+            ANSI_CLEAR_LINE +
+            ANSI_CARTIDGE_RETURN +
+            ANSI_COLOR_HEADER +
+            `[${currentTimeHeader}] ` +
+            isPlugin ? "[PLUGIN] " : "" +
+            `[${prefix}]` +
+            colorFormat +
+            "\r\n"
+        );
+
+        this.buffer += d;
+        // Limit the buffer to 3000 character.
+        this.buffer = this.buffer.slice(-3000);
+        if (this.shell) this.shell.stdout.write(d);
+        if (this.replConsole) this.replConsole.prompt(true);
     }
 }
 
@@ -144,9 +224,9 @@ server.on("connection", (client, info) => {
                 if (global.sshTerminal[`${info.ip}:${info.port}`]) {
                     try {
                         global.sshTerminal[`${info.ip}:${info.port}`].session.removeAllListeners();
-                    } catch (_) {}
+                    } catch (_) { }
                     delete global.sshTerminal[`${info.ip}:${info.port}`];
                 }
-            } catch (_) {}
+            } catch (_) { }
         });
 });
