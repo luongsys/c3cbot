@@ -64,11 +64,12 @@ class SSHInterface {
             this.replConsole.eval = function evaluate(cmd, context, filename, callback) {
                 ocr.call(global.replConsole, cmd, context, filename, function c(err, value) {
                     if (!(err instanceof repl.Recoverable)) {
-                        console.log("CONSOLE issued a command:", (cmd.split(/\r|\n|\r\n/g).length > 1 ? "\r\n" + cmd : cmd));
+                        let e = cmd.replace(/(\r\n|\n|\r)$/, "");
+                        log(`${info.ip}:${info.port} issued a command:`, (e.split(/\r|\n|\r\n/g).length > 1 ? "\r\n" + e : e));
                     } else {
                         callback(err, null);
                     }
-                    console.log("JavaScript execution:", value);
+                    log("JavaScript execution:", value);
                 });
             }
         });

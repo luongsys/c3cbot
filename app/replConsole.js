@@ -35,7 +35,8 @@ let ocr = global.replConsole.eval.clone();
 global.replConsole.eval = function evaluate(cmd, context, filename, callback) {
     ocr.call(global.replConsole, cmd, context, filename, function c(err, value) {
         if (!(err instanceof repl.Recoverable)) {
-            console.log("CONSOLE issued a command:", (cmd.split(/\r|\n|\r\n/g).length > 1 ? os.EOL + cmd : cmd));
+            let e = cmd.replace(/(\r\n|\n|\r)$/, "");
+            console.log("CONSOLE issued a command:", (e.split(/\r|\n|\r\n/g).length > 1 ? os.EOL + e : e));
         } else {
             callback(err, null);
         }
