@@ -30,6 +30,11 @@ global.replConsole = repl.start({
     }
 });
 
+// Exiting the REPL console will stop the bot. 
+this.replConsole.on("close", () => {
+    process.exit();
+});
+
 // Now listen for commands
 let ocr = global.replConsole.eval.clone();
 global.replConsole.eval = function evaluate(cmd, context, filename, callback) {

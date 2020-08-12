@@ -21,7 +21,7 @@ class SSHInterface {
     cols = 0;
     rows = 0;
 
-    constructor(info, session) {
+    constructor(info, session, client) {
         this.info = info;
         this.session = session;
         session.once("shell", accept => {
@@ -60,6 +60,11 @@ class SSHInterface {
                 },
                 input: shell.stdin,
                 output: shell.stdout
+            });
+
+            // Exiting the REPL console will close the connection. 
+            this.replConsole.on("close", () => {
+                client.end();
             });
 
             // Now listen for commands
@@ -225,7 +230,7 @@ server.on("connection", (client, info) => {
         .once("ready", () => {
             client.once("session", accept => {
                 let session = accept();
-                global.sshTerminal[`${info.ip}:${info.port}`] = new SSHInterface(info, session);
+                global.sshTerminal[`${info.ip}:${info.port}`] = new SSHInterface(info, session, client);
             })
         })
         .on("error", e => {
