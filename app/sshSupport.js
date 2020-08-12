@@ -68,6 +68,7 @@ class SSHInterface {
                         log(`${info.ip}:${info.port} issued a command:`, (e.split(/\r|\n|\r\n/g).length > 1 ? "\r\n" + e : e));
                         if (err) {
                             log(`${info.ip}:${info.port} << JavaScript execution failed:`, err);
+                            callback(err);
                         } else {
                             log(`${info.ip}:${info.port} << JavaScript execution:`, value);
                         }

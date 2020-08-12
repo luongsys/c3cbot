@@ -39,6 +39,7 @@ global.replConsole.eval = function evaluate(cmd, context, filename, callback) {
             console.log("CONSOLE issued a command:", (e.split(/\r|\n|\r\n/g).length > 1 ? os.EOL + e : e));
             if (err) {
                 console.log("JavaScript execution failed:", err);
+                callback(err);
             } else {
                 console.log("JavaScript execution:", value);
             }
