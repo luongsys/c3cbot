@@ -155,8 +155,8 @@ class SSHInterface {
                 "\r\n";
 
         this.buffer += d;
-        // Limit the buffer to 3000 character.
-        this.buffer = this.buffer.slice(-3000);
+        // Limit the buffer to 16KB.
+        this.buffer = this.buffer.slice(-16384);
         if (this.shell) this.shell.stdout.write(d);
         if (this.replConsole) this.replConsole.prompt(false);
     }
