@@ -63,13 +63,17 @@ class SSHInterface {
             let ocr = this.replConsole.eval.clone();
             this.replConsole.eval = function evaluate(cmd, context, filename, callback) {
                 ocr.call(global.replConsole, cmd, context, filename, function c(err, value) {
-                    if (!(err instanceof repl.Recoverable)) {
+                    if (!err || !(err instanceof repl.Recoverable)) {
                         let e = cmd.replace(/(\r\n|\n|\r)$/, "");
                         log(`${info.ip}:${info.port} issued a command:`, (e.split(/\r|\n|\r\n/g).length > 1 ? "\r\n" + e : e));
+                        if (err) {
+                            log(`${info.ip}:${info.port} << JavaScript execution failed:`, err);
+                        } else {
+                            log(`${info.ip}:${info.port} << JavaScript execution:`, value);
+                        }
                     } else {
-                        callback(err, null);
+                        return callback(err, null);
                     }
-                    log("JavaScript execution:", value);
                 });
             }
         });
