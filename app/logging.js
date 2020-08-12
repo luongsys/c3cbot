@@ -174,7 +174,10 @@ module.exports = class Logging {
                 // Get the SSH terminal instance to log. 
                 global.sshTerminal[ip].log.call(
                     global.sshTerminal[ip], 
-                    [this.#isPlugin, currentTimeHeader, this.#prefix, ...val]
+                    this.#isPlugin, 
+                    currentTimeHeader, 
+                    this.#prefix, 
+                    ...val
                 );
             }
         }
