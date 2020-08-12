@@ -28,6 +28,8 @@ class SSHInterface {
             let shell = accept();
             log(`${info.ip}:${info.port} opened console.`);
             this.shell = shell;
+            this.shell.columns = this.cols;
+            this.shell.rows = this.rows;
 
             // Get ANSI color header based on config
             let redColorValue = parseInt(process.env.CONSOLE_LOG_COLOR.substr(0, 2), 16);
@@ -91,6 +93,8 @@ class SSHInterface {
             log(`${info.ip}:${info.port} changed terminal size: ${this.cols}x${this.rows} => ${screen.cols}x${screen.rows}`);
             this.cols = screen.cols;
             this.rows = screen.rows;
+            this.shell.columns = this.cols;
+            this.shell.rows = this.rows;
             if (this.shell) {
                 this.shell.stdout.write(
                     ANSI_CLEAR_SCREEN +
@@ -149,7 +153,7 @@ class SSHInterface {
         // Limit the buffer to 3000 character.
         this.buffer = this.buffer.slice(-3000);
         if (this.shell) this.shell.stdout.write(d);
-        if (this.replConsole) this.replConsole.prompt(true);
+        if (this.replConsole) this.replConsole.prompt(false);
     }
 }
 
