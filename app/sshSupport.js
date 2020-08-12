@@ -87,7 +87,7 @@ class SSHInterface {
             accept();
         });
 
-        session.once("window-change", (accept, reject, screen) => {
+        session.on("window-change", (accept, reject, screen) => {
             log(`${info.ip}:${info.port} changed terminal size: ${this.cols}x${this.rows} => ${screen.cols}x${screen.rows}`);
             this.cols = screen.cols;
             this.rows = screen.rows;
