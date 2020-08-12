@@ -33,9 +33,12 @@ global.replConsole = repl.start({
 // Now listen for commands
 let ocr = global.replConsole.eval.clone();
 global.replConsole.eval = function evaluate(cmd, context, filename, callback) {
-    ocr.call(global.replConsole, cmd, context, filename, function callback(err, value) {
+    ocr.call(global.replConsole, cmd, context, filename, function c(err, value) {
         if (!(err instanceof repl.Recoverable)) {
             console.log("CONSOLE issued a command:", (cmd.split(/\r|\n|\r\n/g).length > 1 ? os.EOL + cmd : cmd));
+        } else {
+            callback(err, null);
         }
+        console.log("JavaScript execution:", value);
     });
 }
