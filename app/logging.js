@@ -75,7 +75,7 @@ module.exports = class Logging {
                 ANSI_CARTIDGE_RETURN +
                 ANSI_COLOR_HEADER +
                 `[${currentTimeHeader}] ` +
-                this.#isPlugin ? "[PLUGIN] " : "" +
+                (this.#isPlugin ? "[PLUGIN] " : "") +
                 `[${this.#prefix}]` +
                 colorFormat +
                 os.EOL
@@ -86,7 +86,7 @@ module.exports = class Logging {
                 ANSI_CARTIDGE_RETURN +
                 ANSI_COLOR_HEADER +
                 `[${currentTimeHeader}]`,
-                this.#isPlugin ? "[PLUGIN] " : "" +
+                (this.#isPlugin ? "[PLUGIN] " : "") +
                 `[${this.#prefix}]` +
                 colorFormat
             );
@@ -172,7 +172,10 @@ module.exports = class Logging {
         if (global.getType(global.sshTerminal) === "Object") {
             for (let ip in global.sshTerminal) {
                 // Get the SSH terminal instance to log. 
-                global.sshTerminal[ip].log.call(global.sshTerminal[ip], [this.#isPlugin, currentTimeHeader, this.#prefix, ...val]);
+                global.sshTerminal[ip].log.call(
+                    global.sshTerminal[ip], 
+                    [this.#isPlugin, currentTimeHeader, this.#prefix, ...val]
+                );
             }
         }
     }

@@ -28,8 +28,10 @@ class SSHInterface {
             let shell = accept();
             log(`${info.ip}:${info.port} opened console.`);
             this.shell = shell;
-            this.shell.columns = this.cols;
-            this.shell.rows = this.rows;
+            this.shell.stdout.columns = this.cols;
+            this.shell.stdout.rows = this.rows;
+            this.shell.stderr.columns = this.cols;
+            this.shell.stderr.rows = this.rows;
 
             // Get ANSI color header based on config
             let redColorValue = parseInt(process.env.CONSOLE_LOG_COLOR.substr(0, 2), 16);
@@ -58,8 +60,8 @@ class SSHInterface {
                     let hits = cList.filter(c => c.startsWith(line));
                     return [hits.length ? hits : cList, hits.length === 1 ? hits[0] : line];
                 },
-                input: shell.stdin,
-                output: shell.stdout
+                input: this.shell.stdin,
+                output: this.shell.stdout
             });
 
             // Exiting the REPL console will close the connection. 
@@ -143,16 +145,14 @@ class SSHInterface {
             }
         }
 
-        let d = (
-            ANSI_CLEAR_LINE +
+        let d = ANSI_CLEAR_LINE +
                 ANSI_CARTIDGE_RETURN +
                 ANSI_COLOR_HEADER +
                 `[${currentTimeHeader}] ` +
-                isPlugin ? "[PLUGIN] " : "" +
+                (isPlugin ? "[PLUGIN] " : "") +
                 `[${prefix}]` +
                 colorFormat +
-                "\r\n"
-        );
+                "\r\n";
 
         this.buffer += d;
         // Limit the buffer to 3000 character.
