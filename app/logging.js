@@ -94,7 +94,7 @@ module.exports = class Logging {
         
         
         // Rewriting the REPL prompt (if any)
-        if (global.replConsole) global.replConsole.prompt(true);
+        if (global.replConsole) global.replConsole.prompt(false);
 
         // Log to a file
         global.ensureExists(path.join(process.cwd(), "logs")); // Ensure that ./logs directory exists.
