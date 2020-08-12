@@ -26,14 +26,21 @@
   },
   "homepage": "https://github.com/c3cbot/c3cbot#readme",
   "dependencies": {
+    "@discordjs/opus": "^0.3.2",
     "adm-zip": "^0.4.16",
     "buffer-json": "^2.0.0",
+    "bufferutil": "^4.0.1",
     "custom-env": "^2.0.1",
+    "discord.js": "^12.2.0",
     "dotenv": "^8.2.0",
+    "erlpack": "github:discordapp/erlpack",
+    "libsodium-wrappers": "^0.7.8",
     "msgpack5": "^4.2.1",
     "sanitize-filename": "^1.6.3",
     "semver": "^7.3.2",
-    "ssh2": "^0.8.9"
+    "ssh2": "^0.8.9",
+    "utf-8-validate": "^5.0.2",
+    "zlib-sync": "^0.1.7"
   },
   "devDependencies": {
     "babel-eslint": "^10.1.0",
