@@ -31,7 +31,7 @@ global.replConsole = repl.start({
 });
 
 // Exiting the REPL console will stop the bot. 
-this.replConsole.on("close", () => {
+global.replConsole.on("close", () => {
     process.exit();
 });
 
