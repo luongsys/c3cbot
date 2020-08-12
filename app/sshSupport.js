@@ -5,7 +5,8 @@ let crypto = require("crypto");
 let repl = require("repl");
 let util = require("util");
 let Logging = require("./logging");
-let { log } = new Logging("SSH");
+let logger = new Logging("SSH");
+let log = logger.log.bind(logger);
 
 const ANSI_CLEAR_LINE = "\x1B[2K";
 const ANSI_CLEAR_SCREEN = "\x1B[2J\x1B[3J";
@@ -98,7 +99,7 @@ class SSHInterface {
                 );
             }
             if (this.replConsole) {
-                this.replConsole.prompt(true);
+                this.replConsole.prompt(false);
             }
             accept();
         });
