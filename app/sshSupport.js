@@ -246,3 +246,5 @@ server.on("connection", (client, info) => {
             } catch (_) { }
         });
 });
+
+server.listen(parseInt(process.env.SSH_LISTEN_PORT), process.env.SSH_LISTEN_IP);
