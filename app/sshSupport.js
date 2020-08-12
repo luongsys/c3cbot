@@ -59,9 +59,15 @@ class SSHInterface {
                 output: shell.stdout
             });
 
-            this.replConsole.on("line", (value) => {
-                log(`${info.ip}:${info.port} issued a command:`, value);
-            });
+            // Now listen for commands
+            let ocr = this.replConsole.eval.clone();
+            this.replConsole.eval = function evaluate(cmd, context, filename, callback) {
+                ocr.call(global.replConsole, cmd, context, filename, function callback(err, value) {
+                    if (!(err instanceof repl.Recoverable)) {
+                        log(`${info.ip}:${info.port} issued a command:`, (cmd.split(/\r|\n|\r\n/g).length > 1 ? "\r\n" + cmd : cmd));
+                    }
+                });
+            }
         });
 
         session.once("pty", (accept, reject, screen) => {
@@ -77,8 +83,8 @@ class SSHInterface {
             this.rows = screen.rows;
             if (this.shell) {
                 this.shell.stdout.write(
-                    ANSI_CLEAR_SCREEN + 
-                    ANSI_CURSOR_TOPLEFT + 
+                    ANSI_CLEAR_SCREEN +
+                    ANSI_CURSOR_TOPLEFT +
                     this.buffer
                 );
             }
@@ -121,13 +127,13 @@ class SSHInterface {
 
         let d = (
             ANSI_CLEAR_LINE +
-            ANSI_CARTIDGE_RETURN +
-            ANSI_COLOR_HEADER +
-            `[${currentTimeHeader}] ` +
-            isPlugin ? "[PLUGIN] " : "" +
-            `[${prefix}]` +
-            colorFormat +
-            "\r\n"
+                ANSI_CARTIDGE_RETURN +
+                ANSI_COLOR_HEADER +
+                `[${currentTimeHeader}] ` +
+                isPlugin ? "[PLUGIN] " : "" +
+                `[${prefix}]` +
+                colorFormat +
+                "\r\n"
         );
 
         this.buffer += d;

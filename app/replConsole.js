@@ -1,4 +1,5 @@
 let repl = require("repl");
+let os = require("os");
 
 // Get ANSI color header based on config
 let redColorValue = parseInt(process.env.CONSOLE_LOG_COLOR.substr(0, 2), 16);
@@ -29,6 +30,12 @@ global.replConsole = repl.start({
     }
 });
 
-global.replConsole.on("line", (value) => {
-    console.log("CONSOLE issued a command:", value);
-});
+// Now listen for commands
+let ocr = global.replConsole.eval.clone();
+global.replConsole.eval = function evaluate(cmd, context, filename, callback) {
+    ocr.call(global.replConsole, cmd, context, filename, function callback(err, value) {
+        if (!(err instanceof repl.Recoverable)) {
+            console.log("CONSOLE issued a command:", (cmd.split(/\r|\n|\r\n/g).length > 1 ? os.EOL + cmd : cmd));
+        }
+    });
+}
