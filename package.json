@@ -31,7 +31,7 @@
     "buffer-json": "^2.0.0",
     "bufferutil": "^4.0.1",
     "custom-env": "^2.0.1",
-    "discord.js": "^12.2.0",
+    "discord.js": "^12.3.1",
     "dotenv": "^8.2.0",
     "erlpack": "github:discordapp/erlpack",
     "libsodium-wrappers": "^0.7.8",
